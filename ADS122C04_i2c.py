@@ -281,17 +281,18 @@ def main():
         time.sleep(delay)
 
 
+        # # read voltage and temp
         # voltage = adc.read_conversion()
-        # # time.sleep(0.3)
+        # time.sleep(0.3)
         # temp = adc.read_temp()
         # os.system('clear')
         # print("DAQuiri is reading: " + "{0:.5f}".format(voltage) + " V")
         # print('----------\n\n')
 
-        # # time.sleep(0.1)
+        # time.sleep(0.1)
         # print("DAQuiri temperature is: " + "{0:.5f}".format(temp) + " C")
         # print('----------\n\n')
-        # # time.sleep(0.3)
+        # time.sleep(0.3)
 
 
 if __name__ == '__main__':
