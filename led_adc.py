@@ -22,6 +22,7 @@ def setup():
     print(".....setup complete!")
 
 def cleanup():
+    print("\n-----------------\n")
     print("GPIO pins cleaned up!")
     GPIO.cleanup()
 
@@ -37,11 +38,11 @@ def blink(pin, repeat, delay):
 def main():
     adc = ads.ADS122C04_i2c(ADC_ADR)
     delay = 0.1
-    
     low = 0.3
     medium = 0.5
     high = 1
     alarm = 1.5
+
     setup()
 
     try:
@@ -70,6 +71,8 @@ def main():
                 GPIO.output(LED2, GPIO.HIGH)
                 GPIO.output(LED3, GPIO.HIGH)
             else:
+                GPIO.output(LED1, GPIO.HIGH)
+                GPIO.output(LED2, GPIO.HIGH)
                 blink(LED3, 3, 0.1)
 
             time.sleep(delay)
