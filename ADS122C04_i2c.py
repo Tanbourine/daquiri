@@ -53,12 +53,12 @@ class ADS122C04_i2c():
         # initialize default configurations
         self.mux        = 0b0000        # AIN0/AIN1
         self.gain       = 0b000         # Gain = 1
-        self.pga_bypass = 0b001         # Bypass PGA
+        self.pga_bypass = 0b1           # Bypass PGA
         self.dr         = 0b000         # Datarate = 20hz
-        self.mode       = 0b1           # Turbo Mode (better noise performance)
+        self.mode       = 0b0           # Turbo Mode (better noise performance)
         self.cm         = 0b1           # Continuous Conversion Mode
         self.vref       = 0b00          # Use internal 2.048V ref
-        self.ts         = 0b1           # Enable internal temp sensor
+        self.ts         = 0b0           # Disable internal temp sensor
         self.drdy       = 0b1           # Enable conversion ready flag
         self.dcnt       = 0b0           # Disable conversion counter
         self.crc        = 0b00          # CRC 16 checksum disabled
@@ -67,6 +67,9 @@ class ADS122C04_i2c():
         self.i1mux      = 0b000         # Disable IDAC1
         self.i2mux      = 0b000         # Disable IDAC2
 
+
+        # reset the device
+        self.reset()
 
         # assemble configs into bytes to write
         self.assemble_config_bytes()
@@ -181,7 +184,7 @@ class ADS122C04_i2c():
 
 
     def start_conversion(self):
-        self.bus.write_byte(self.address, START) 
+        self.bus.write_byte(self.address, START)
 
 
     def reset(self):
@@ -202,20 +205,20 @@ class ADS122C04_i2c():
                 key = key.lower()
 
                 if key in ['mux', 'gain', 'pga_bypass']:
-                    assemble_config_bytes(0)
-                    self.bus.write_byte_data(self.address, 0, self.config[0])
+                    self.assemble_config_bytes(0)
+                    self.bus.write_byte_data(self.address, WREG_ARR[0], self.config[0])
 
                 elif key in ['dr', 'mode', 'cm', 'vref', 'ts']:
-                    assemble_config_bytes(1)
-                    self.bus.write_byte_data(self.address, 1, self.config[1])
+                    self.assemble_config_bytes(1)
+                    self.bus.write_byte_data(self.address, WREG_ARR[1], self.config[1])
 
                 elif key in ['drdy', 'dcnt', 'crc', 'bcs', 'idac']:
-                    assemble_config_bytes(2)
-                    self.bus.write_byte_data(self.address, 2, self.config[2])
+                    self.assemble_config_bytes(2)
+                    self.bus.write_byte_data(self.address, WREG_ARR[2], self.config[2])
 
                 elif key in ['i1mux', 'i2mux']:
-                    assemble_config_bytes(3)
-                    self.bus.write_byte_data(self.address, 3, self.config[3])
+                    self.assemble_config_bytes(3)
+                    self.bus.write_byte_data(self.address, WREG_ARR[3], self.config[3])
 
                 else:
                     print("CONFIG ERROR: Invalid keyword")
@@ -240,17 +243,55 @@ class ADS122C04_i2c():
 
         return raw_voltage
 
-    def start_continuous_scan(self, rate=20):
-        """ continuously stream adc conversions at specified rates (Hz) """
-        os.system('clear')
-        print("Voltage: " + "{0:.3f}".format(read_conversion()) + " V")
-        time.sleep(1/rate)
+    def read_temp(self):
+        # temporaily set ts bit to 1 to enable temp sensor
+        self.update_config(ts=0b1)
+        time.sleep(0.3)
+
+        # read data
+        raw_data_arr = self.bus.read_i2c_block_data(self.address, RDATA, 3)
+        data = ((raw_data_arr[0]<< 16) | (raw_data_arr[1]<<8) | raw_data_arr[2])
+        data = data >> 10
+
+
+        # account for negative scale (2's complement)
+        if (data & 0x800000) == 0x800000:
+            data = ~(data) - 1
+
+        # convert to C
+        temp_celcius = data * 0.03125
+
+        # return ts bit to 0
+        time.sleep(0.3)
+        self.update_config(ts=0b0)
+        time.sleep(0.3)
+
+        return temp_celcius
 
 
 def main():
-    adc = ADS122C04_i2c(0x48)
-    adc.start_continuous_scan()
+    # create object called adc with 0x40 address
+    adc = ADS122C04_i2c(0x40)
+    delay = 0.1
+    while(1):
+        voltage = adc.read_conversion()
+        os.system('clear')
+        print("DAQuiri is reading: " + "{0:.5f}".format(voltage) + " V")
+        print('----------\n\n')
+        time.sleep(delay)
 
+
+        # voltage = adc.read_conversion()
+        # # time.sleep(0.3)
+        # temp = adc.read_temp()
+        # os.system('clear')
+        # print("DAQuiri is reading: " + "{0:.5f}".format(voltage) + " V")
+        # print('----------\n\n')
+
+        # # time.sleep(0.1)
+        # print("DAQuiri temperature is: " + "{0:.5f}".format(temp) + " C")
+        # print('----------\n\n')
+        # # time.sleep(0.3)
 
 
 if __name__ == '__main__':
