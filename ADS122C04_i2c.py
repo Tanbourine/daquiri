@@ -243,6 +243,10 @@ class ADS122C04_i2c():
 
         return raw_voltage
 
+    def print_voltage(self):
+        voltage = self.read_conversion()
+        print("DAQuiri is reading: " + "{0:.5f}".format(voltage) + " V")
+
     def read_temp(self):
         # temporaily set ts bit to 1 to enable temp sensor
         self.update_config(ts=0b1)
